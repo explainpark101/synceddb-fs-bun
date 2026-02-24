@@ -40,6 +40,18 @@ async function ensureStoreDir(storeName: string): Promise<void> {
   await fs.mkdir(dir, { recursive: true });
 }
 
+async function storeExists(storeName: string): Promise<boolean> {
+  const dir = storeDir(storeName);
+  const fs = await import("node:fs/promises");
+  try {
+    await fs.access(dir);
+    return true;
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === "ENOENT") return false;
+    throw e;
+  }
+}
+
 async function listEntityIds(storeName: string): Promise<string[]> {
   const dir = storeDir(storeName);
   const fs = await import("node:fs/promises");
@@ -97,11 +109,12 @@ function jsonResponse(data: unknown, status = 200): Response {
   });
 }
 
-function corsHeaders(origin: string | null): Record<string, string> {
+function corsHeaders(): Record<string, string> {
   return {
-    "Access-Control-Allow-Origin": origin ?? "*",
+    "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Headers": "*",
+    "Access-Control-Max-Age": "86400",
   };
 }
 
@@ -114,6 +127,14 @@ function parsePath(url: string): { storeName: string; id: string | null } | null
 }
 
 async function handleGet(storeName: string, url: string): Promise<Response> {
+  const exists = await storeExists(storeName);
+  if (!exists) {
+    return new Response(JSON.stringify({ data: [], hasMore: false }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
   const u = new URL(url, "http://localhost");
   const size = Math.min(Math.max(1, parseInt(u.searchParams.get("size") ?? "100", 10)), 1000);
   const after = u.searchParams.get("after") ?? undefined;
@@ -232,15 +253,11 @@ async function handleDelete(storeName: string, id: string): Promise<Response> {
 async function handleFetch(req: Request): Promise<Response> {
   const url = req.url;
   const method = req.method;
-  const origin = req.headers.get("Origin") ?? null;
 
   if (method === "OPTIONS") {
     return new Response(null, {
       status: 204,
-      headers: {
-        "Access-Control-Max-Age": "86400",
-        ...corsHeaders(origin),
-      },
+      headers: corsHeaders(),
     });
   }
 
@@ -248,7 +265,7 @@ async function handleFetch(req: Request): Promise<Response> {
   if (!path) {
     return new Response(JSON.stringify({ error: "Not found" }), {
       status: 404,
-      headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
+      headers: { "Content-Type": "application/json", ...corsHeaders() },
     });
   }
 
@@ -257,7 +274,7 @@ async function handleFetch(req: Request): Promise<Response> {
   } catch {
     return new Response(JSON.stringify({ error: "Invalid store name" }), {
       status: 400,
-      headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
+      headers: { "Content-Type": "application/json", ...corsHeaders() },
     });
   }
 
@@ -282,7 +299,7 @@ async function handleFetch(req: Request): Promise<Response> {
   }
 
   const h = new Headers(res.headers);
-  Object.entries(corsHeaders(origin)).forEach(([k, v]) => h.set(k, v));
+  Object.entries(corsHeaders()).forEach(([k, v]) => h.set(k, v));
   return new Response(res.body, { status: res.status, headers: h });
 }
 
