@@ -12,7 +12,7 @@ import {
   triggerSync,
   STORE_NAME_REGEX,
 } from './db';
-import { Share2, ShareIcon } from 'lucide-vue-next';
+import { Share2, Github } from 'lucide-vue-next';
 
 const memos = ref([]);
 const newText = ref('');
@@ -144,10 +144,23 @@ function remove(id) {
 </script>
 
 <template>
-  <div class="max-w-lg mx-auto p-6 text-zinc-100">
-    <header class="mb-5">
-      <h1 class="text-2xl font-semibold mb-1 text-zinc-50">메모장</h1>
-      <p class="text-sm text-zinc-500 m-0">SyncedDB · 로컬 저장 후 서버와 동기화</p>
+  <div class="max-w-lg mx-auto p-6 text-zinc-100 relative">
+    <header class="mb-5 flex justify-between items-start gap-4">
+      <div>
+        <h1 class="text-2xl font-semibold mb-1 text-zinc-50">메모장</h1>
+        <p class="text-sm text-zinc-500 m-0">SyncedDB · 로컬 저장 후 서버와 동기화</p>
+      </div>
+      <a
+        href="https://github.com/explainpark101/synceddb-fs-bun/tree/main"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="flex items-center select-none gap-2 shrink-0 p-2 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors"
+        aria-label="GitHub 저장소"
+        title="GitHub 저장소"
+      >
+        <Github class="size-6" />
+        Backend Code
+      </a>
     </header>
     <p v-if="loading" class="text-sm text-zinc-500 m-0">로딩 중…</p>
     <p v-else-if="error" class="text-sm text-rose-400 m-0">오류: {{ error }}</p>
