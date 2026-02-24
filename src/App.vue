@@ -12,6 +12,7 @@ import {
   triggerSync,
   STORE_NAME_REGEX,
 } from './db';
+import { Share2, ShareIcon } from 'lucide-vue-next';
 
 const memos = ref([]);
 const newText = ref('');
@@ -26,6 +27,24 @@ const syncError = ref('');
 const syncInProgress = ref(false);
 let db = null;
 let query = null;
+
+async function onShareClick() {
+  let shareUrl = '';
+  try {
+    const url = new URL(window.location.href);
+    url.searchParams.set('server', getApiBase());
+    url.searchParams.set('store', currentStore.value);
+    shareUrl = url.toString();
+    await navigator.clipboard.writeText(shareUrl);
+    alert('공유 URL이 클립보드에 복사되었습니다.');
+  } catch (e) {
+    alert(
+      shareUrl
+        ? `URL 복사에 실패했습니다. 아래 링크를 수동으로 복사하세요.\n\n${shareUrl}`
+        : 'URL 복사에 실패했습니다. 브라우저에서 수동으로 주소를 복사하세요.',
+    );
+  }
+}
 
 function initQuery(storeName) {
   query?.close();
@@ -125,206 +144,86 @@ function remove(id) {
 </script>
 
 <template>
-  <div class="app">
-    <header class="header">
-      <h1>메모장</h1>
-      <p class="sub">SyncedDB · 로컬 저장 후 서버와 동기화</p>
+  <div class="max-w-lg mx-auto p-6 text-zinc-100">
+    <header class="mb-5">
+      <h1 class="text-2xl font-semibold mb-1 text-zinc-50">메모장</h1>
+      <p class="text-sm text-zinc-500 m-0">SyncedDB · 로컬 저장 후 서버와 동기화</p>
     </header>
-    <p v-if="loading" class="status">로딩 중…</p>
-    <p v-else-if="error" class="status error">오류: {{ error }}</p>
+    <p v-if="loading" class="text-sm text-zinc-500 m-0">로딩 중…</p>
+    <p v-else-if="error" class="text-sm text-rose-400 m-0">오류: {{ error }}</p>
     <template v-else>
-    <div class="store-row">
-      <label class="store-label">SyncedDB 서버 주소</label>
-      <form class="form store-form" @submit.prevent="applyApiUrl">
-        <input
-          v-model="apiUrlInput"
-          type="url"
-          class="input store-input store-input-wide"
-          placeholder="http://localhost:3000"
-          autocomplete="off"
-        />
-        <button type="submit" class="btn btn-store">적용</button>
-      </form>
-      <p v-if="apiUrlError" class="status error">{{ apiUrlError }}</p>
-      <p v-else class="store-current">현재: {{ getApiBase() }}</p>
+    <div class="mb-5 p-3 rounded-lg bg-zinc-900 border border-zinc-700 relative">
+      <div class="flex justify-end mb-3">
+        <button
+          type="button"
+          class="flex items-center gap-2 py-1.5 px-3 rounded-lg bg-emerald-600 text-white text-xs font-medium cursor-pointer hover:bg-emerald-500"
+          @click="onShareClick"
+        >
+          <Share2 class="size-4" />
+          공유 링크 복사
+        </button>
+      </div>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs text-zinc-400 mb-1">SyncedDB 서버 주소</label>
+          <form class="flex gap-2" @submit.prevent="applyApiUrl">
+            <input
+              v-model="apiUrlInput"
+              type="url"
+              class="flex-1 min-w-0 py-1.5 px-2.5 border border-zinc-600 rounded-lg bg-zinc-800 text-zinc-200 text-sm placeholder-zinc-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+              placeholder="http://localhost:3000"
+              autocomplete="off"
+            />
+            <button type="submit" class="py-1.5 px-3 rounded-lg bg-emerald-600 text-white text-sm font-medium cursor-pointer hover:bg-emerald-500 shrink-0">적용</button>
+          </form>
+          <p v-if="apiUrlError" class="text-xs text-rose-400 mt-0.5 m-0">{{ apiUrlError }}</p>
+          <p v-else class="text-xs text-zinc-500 mt-0.5 m-0">현재: {{ getApiBase() }}</p>
+        </div>
+        <div>
+          <label class="block text-xs text-zinc-400 mb-1">스토어 이름</label>
+          <form class="flex gap-2" @submit.prevent="applyStoreName">
+            <input
+              v-model="storeNameInput"
+              type="text"
+              class="flex-1 max-w-48 min-w-0 py-1.5 px-2.5 border border-zinc-600 rounded-lg bg-zinc-800 text-zinc-200 text-sm placeholder-zinc-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+              placeholder="예: memos, todos"
+              autocomplete="off"
+            />
+            <button type="submit" class="py-1.5 px-3 rounded-lg bg-emerald-600 text-white text-sm font-medium cursor-pointer hover:bg-emerald-500 shrink-0">적용</button>
+          </form>
+          <p v-if="storeError" class="text-xs text-rose-400 mt-0.5 m-0">{{ storeError }}</p>
+          <p v-else class="text-xs text-zinc-500 mt-0.5 m-0">현재: {{ currentStore }}</p>
+        </div>
+      </div>
     </div>
-    <div class="store-row">
-      <label class="store-label">스토어 이름</label>
-      <form class="form store-form" @submit.prevent="applyStoreName">
-        <input
-          v-model="storeNameInput"
-          type="text"
-          class="input store-input"
-          placeholder="예: memos, todos"
-          autocomplete="off"
-        />
-        <button type="submit" class="btn btn-store">적용</button>
-      </form>
-      <p v-if="storeError" class="status error">{{ storeError }}</p>
-      <p v-else class="store-current">현재: {{ currentStore }}</p>
-    </div>
-    <div class="store-row sync-row">
+    <div class="mb-5 p-3 rounded-lg bg-zinc-900 border border-zinc-700 flex flex-col gap-1">
       <button
         type="button"
-        class="btn btn-sync"
+        class="py-2 px-4 rounded-lg bg-emerald-600 text-white text-sm font-medium cursor-pointer hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
         :disabled="syncInProgress"
         @click="onSyncClick"
       >
         {{ syncInProgress ? '가져오는 중…' : 'Sync (서버에서 불러오기)' }}
       </button>
-      <p v-if="syncError" class="status error">{{ syncError }}</p>
+      <p v-if="syncError" class="text-sm text-rose-400 m-0">{{ syncError }}</p>
     </div>
-    <form class="form" @submit.prevent="add">
+    <form class="flex gap-2 mb-5" @submit.prevent="add">
       <input
         v-model="newText"
         type="text"
-        class="input"
+        class="flex-1 py-2 px-3 border border-zinc-600 rounded-lg bg-zinc-800 text-zinc-200 text-base placeholder-zinc-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
         placeholder="메모 입력 후 Enter"
         autocomplete="off"
       />
-      <button type="submit" class="btn">추가</button>
+      <button type="submit" class="py-2 px-4 rounded-lg bg-emerald-600 text-white text-sm font-medium cursor-pointer hover:bg-emerald-500">추가</button>
     </form>
-    <ul class="list" v-if="memos.length">
-      <li v-for="m in memos" :key="m.id" class="item">
-        <span class="text">{{ m.text }}</span>
-        <button type="button" class="btn-delete" @click="remove(m.id)" aria-label="삭제">×</button>
+    <ul v-if="memos.length" class="list-none m-0 p-0">
+      <li v-for="m in memos" :key="m.id" class="flex items-center gap-2 py-2 px-3 rounded-lg bg-zinc-800 border border-zinc-700 mb-2">
+        <span class="flex-1 wrap-break-word text-zinc-200">{{ m.text }}</span>
+        <button type="button" class="shrink-0 w-7 h-7 border-0 rounded bg-transparent text-zinc-500 text-xl leading-none cursor-pointer p-0 hover:bg-rose-500/20 hover:text-rose-400" @click="remove(m.id)" aria-label="삭제">×</button>
       </li>
     </ul>
-    <p v-else class="empty">메모가 없습니다.</p>
+    <p v-else class="text-sm text-zinc-500 m-0">메모가 없습니다.</p>
     </template>
   </div>
 </template>
-
-<style scoped>
-.app {
-  max-width: 32rem;
-  margin: 0 auto;
-  padding: 1.5rem;
-}
-.header {
-  margin-bottom: 1.25rem;
-}
-.header h1 {
-  font-size: 1.5rem;
-  font-weight: 600;
-  margin: 0 0 0.25rem 0;
-}
-.sub {
-  font-size: 0.875rem;
-  color: var(--color-muted, #64748b);
-  margin: 0;
-}
-.store-row {
-  margin-bottom: 1.25rem;
-  padding: 0.75rem;
-  border-radius: 6px;
-  background: var(--color-bg, #1e293b);
-  border: 1px solid var(--color-border, #334155);
-}
-.store-label {
-  display: block;
-  font-size: 0.75rem;
-  color: var(--color-muted, #94a3b8);
-  margin-bottom: 0.5rem;
-}
-.store-form {
-  margin-bottom: 0.25rem;
-}
-.store-form .store-input {
-  max-width: 12rem;
-}
-.store-form .store-input-wide {
-  max-width: none;
-}
-.store-current {
-  font-size: 0.75rem;
-  color: var(--color-muted, #94a3b8);
-  margin: 0.25rem 0 0 0;
-}
-.sync-row {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-.btn-sync:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-.form {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1.25rem;
-}
-.input {
-  flex: 1;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 6px;
-  font-size: 1rem;
-}
-.input:focus {
-  outline: none;
-  border-color: var(--color-focus, #3b82f6);
-}
-.btn {
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 6px;
-  background: var(--color-primary, #3b82f6);
-  color: #fff;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-}
-.btn:hover {
-  opacity: 0.9;
-}
-.list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  border-radius: 6px;
-  background: var(--color-bg, #f8fafc);
-  margin-bottom: 0.5rem;
-}
-.text {
-  flex: 1;
-  word-break: break-word;
-}
-.btn-delete {
-  flex-shrink: 0;
-  width: 1.75rem;
-  height: 1.75rem;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--color-muted, #64748b);
-  font-size: 1.25rem;
-  line-height: 1;
-  cursor: pointer;
-  padding: 0;
-}
-.btn-delete:hover {
-  background: #fee2e2;
-  color: #b91c1c;
-}
-.empty {
-  color: var(--color-muted, #64748b);
-  font-size: 0.875rem;
-  margin: 0;
-}
-.status {
-  color: var(--color-muted, #64748b);
-  font-size: 0.875rem;
-  margin: 0;
-}
-.status.error {
-  color: #b91c1c;
-}
-</style>
