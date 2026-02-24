@@ -1,0 +1,14 @@
+# SyncedDB file backend — storage persisted under ./data (mounted at /mnt in container)
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      STORAGE_PATH: /mnt
+      PORT: "3000"
+    volumes:
+      # Host directory for JSON file storage; container uses /mnt
+      - ./data:/mnt
