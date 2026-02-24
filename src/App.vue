@@ -113,7 +113,34 @@ async function onSyncClick() {
   }
 }
 
+/** 공유 링크 쿼리(server, store) 파싱 후 적용하고 URL에서 제거 */
+function applySharedLinkParams() {
+  const url = new URL(window.location.href);
+  const serverParam = url.searchParams.get('server');
+  const storeParam = url.searchParams.get('store');
+  let applied = false;
+
+  if (serverParam && setApiBase(serverParam)) {
+    apiUrlInput.value = getApiBase();
+    applied = true;
+  }
+  if (storeParam && STORE_NAME_REGEX.test(storeParam.trim())) {
+    const name = storeParam.trim();
+    addStoreName(name);
+    setCurrentStoreName(name);
+    currentStore.value = name;
+    storeNameInput.value = name;
+    applied = true;
+  }
+
+  if (applied) {
+    const cleanUrl = url.pathname + (url.hash || '');
+    window.history.replaceState(null, '', cleanUrl);
+  }
+}
+
 onMounted(async () => {
+  applySharedLinkParams();
   try {
     db = await getDB();
     getSyncManager();
